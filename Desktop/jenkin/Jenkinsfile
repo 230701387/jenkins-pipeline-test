@@ -1,0 +1,66 @@
+pipeline {
+    agent any
+
+    triggers {
+        // Triggers the pipeline via GitHub webhook when a push occurs
+        githubPush()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checks out source code from the configured Git repository
+                checkout scm
+            }
+        }
+
+        stage('Install Deps') {
+            steps {
+                echo 'Installing dependencies...'
+                // Upgrades pip and installs project dependencies
+                sh 'pip install --upgrade pip'
+                sh 'pip install -r requirements.txt'
+            }
+        }
+
+        stage('Run Unit Test') {
+            steps {
+                echo 'Running unit tests with pytest...'
+                // Executes pytest for unit testing
+                sh 'pytest'
+            }
+        }
+
+        stage('Statistical Analysis') {
+            steps {
+                echo 'Running linting with flake8...'
+                // Runs flake8 for code quality analysis
+                sh 'flake8 .'
+            }
+        }
+
+        stage('Deploy Staging') {
+            // Ensures deployment only happens if the push was to the main branch
+            when {
+                branch 'main'
+            }
+            steps {
+                echo 'Deploying to staging environment...'
+                // Add your specific deployment commands here (e.g., ansible, docker, helm, ssh)
+                sh './deploy_staging.sh'
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs() // Cleans the workspace after completion
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Check the logs for details.'
+        }
+    }
+}
